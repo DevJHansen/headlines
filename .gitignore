@@ -1,0 +1,50 @@
+/tmp
+# Go binary files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build artifacts
+/build
+/bin
+*.a
+*.out
+
+# Dependency directories
+vendor/
+go.sum
+go.mod
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Environment variables
+.env
+
+# Firebase credentials
+firebase-sa.json
+
+# Exclude coverage files
+coverage.out
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+TODO.md
