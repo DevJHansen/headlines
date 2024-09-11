@@ -73,9 +73,7 @@ func ScrapeTheNamibian(c *colly.Collector, headlineChan chan<- internal.Headline
 
 	c.OnHTML("main.wp-block-group.nam-main-wrap", func(e *colly.HTMLElement) {
 		e.ForEach("div.ps-container.ps-mx-auto.ps-py-6.ps-px-4.wp-block-ps-post-category", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 
 				sectionTitleEl := el.DOM.Find("h2").First()
 				fmtSectionTitle := utils.TrimWhiteSpace(sectionTitleEl.Text())
@@ -109,29 +107,30 @@ func ScrapeTheNamibian(c *colly.Collector, headlineChan chan<- internal.Headline
 							return
 						}
 
-						// Done after firestore check for efficiency
 						mediaContainer := e.DOM.Find("figure.wp-block-ps-post-featured-image")
-						mediaElement := mediaContainer.Find("img.attachment-post-thumbnail").First()
-						mediaLink, _ := mediaElement.Attr("src")
+						if mediaContainer.Length() > 0 {
+							mediaElement := mediaContainer.Find("img.attachment-post-thumbnail").First()
+							mediaLink, _ := mediaElement.Attr("src")
 
-						title := e.ChildText("h1.nam_title")
-						content := ""
+							title := e.ChildText("h1.nam_title")
+							content := ""
 
-						e.DOM.Find("div.entry-content.post_content.wp-block-post-content.is-layout-flow.wp-block-post-content-is-layout-flow p").Each(func(_ int, s *goquery.Selection) {
-							content += s.Text()
-						})
-						content = strings.TrimSpace(content)
+							e.DOM.Find("div.entry-content.post_content.wp-block-post-content.is-layout-flow.wp-block-post-content-is-layout-flow p").Each(func(_ int, s *goquery.Selection) {
+								content += s.Text()
+							})
+							content = strings.TrimSpace(content)
 
-						headlineChan <- internal.Headline{
-							Media:      mediaLink,
-							Title:      title,
-							Content:    content,
-							CreatedAt:  createdAt,
-							Source:     source,
-							Link:       linkToArticle,
-							Posted:     false,
-							DatePosted: 0,
-							Deleted:    false,
+							headlineChan <- internal.Headline{
+								Media:      mediaLink,
+								Title:      title,
+								Content:    content,
+								CreatedAt:  createdAt,
+								Source:     source,
+								Link:       linkToArticle,
+								Posted:     false,
+								DatePosted: 0,
+								Deleted:    false,
+							}
 						}
 					})
 
@@ -153,10 +152,8 @@ func ScrapeTheBrief(c *colly.Collector, headlineChan chan<- internal.Headline, w
 	defer wg.Done()
 	c.OnHTML("div.jeg_news_ticker_items", func(e *colly.HTMLElement) {
 		e.ForEach("a", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 
 				linkToArticle := el.Attr("href")
 
@@ -220,10 +217,8 @@ func ScrapeFutureMedia(c *colly.Collector, headlineChan chan<- internal.Headline
 	defer wg.Done()
 	c.OnHTML("div.proradio-col.proradio-s12.proradio-m12.proradio-l8", func(e *colly.HTMLElement) {
 		e.ForEach("article", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(e *colly.HTMLElement) {
-				defer wg.Done()
+			func(e *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h3.proradio-post__title.proradio-h2").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -289,10 +284,8 @@ func ScrapeOilAndGas(c *colly.Collector, headlineChan chan<- internal.Headline, 
 	defer wg.Done()
 	c.OnHTML("div#tan-main-banner-latest-trending-popular-popular", func(e *colly.HTMLElement) {
 		e.ForEach("div.small-post", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h5.title").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -347,10 +340,8 @@ func ScrapeOilAndGas(c *colly.Collector, headlineChan chan<- internal.Headline, 
 
 	c.OnHTML("div#tan-main-banner-latest-trending-popular-recent", func(e *colly.HTMLElement) {
 		e.ForEach("div.small-post", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h5.title").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -405,10 +396,8 @@ func ScrapeOilAndGas(c *colly.Collector, headlineChan chan<- internal.Headline, 
 
 	c.OnHTML("div#tan-main-banner-latest-trending-popular-categorised", func(e *colly.HTMLElement) {
 		e.ForEach("div.small-post", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h5.title").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -472,10 +461,8 @@ func ScrapeNewEra(c *colly.Collector, headlineChan chan<- internal.Headline, wg 
 	defer wg.Done()
 	c.OnHTML("div#cmsmasters_column_ec66bbce2e", func(e *colly.HTMLElement) {
 		e.ForEach("div.cmsmasters_post_cont", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h3.entry-title").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -530,10 +517,8 @@ func ScrapeNewEra(c *colly.Collector, headlineChan chan<- internal.Headline, wg 
 	})
 	c.OnHTML("div#blog_eb4f7a9570", func(e *colly.HTMLElement) {
 		e.ForEach("article", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h3.entry-title").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -588,10 +573,8 @@ func ScrapeNewEra(c *colly.Collector, headlineChan chan<- internal.Headline, wg 
 	})
 	c.OnHTML("div#blog_3b7nl6sigc", func(e *colly.HTMLElement) {
 		e.ForEach("article", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkParentEl := el.DOM.Find("h3.entry-title").First()
 				linkEl := linkParentEl.Find("a")
 				linkToArticle, _ := linkEl.Attr("href")
@@ -656,10 +639,8 @@ func ScrapeInformante(c *colly.Collector, headlineChan chan<- internal.Headline,
 	defer wg.Done()
 	c.OnHTML("ul.ultp-news-ticker", func(e *colly.HTMLElement) {
 		e.ForEach("div.ultp-list-box", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkEl := el.DOM.Find("a").First()
 				linkToArticle, _ := linkEl.Attr("href")
 
@@ -722,10 +703,8 @@ func ScrapeRepublikein(c *colly.Collector, headlineChan chan<- internal.Headline
 	defer wg.Done()
 	c.OnHTML(`[data-widget-id="9094"]`, func(e *colly.HTMLElement) {
 		e.ForEach("h4.article-title", func(_ int, el *colly.HTMLElement) {
-			wg.Add(1)
 
-			go func(el *colly.HTMLElement) {
-				defer wg.Done()
+			func(el *colly.HTMLElement) {
 				linkEl := el.DOM.Find("a").First()
 				linkToArticle, _ := linkEl.Attr("href")
 
