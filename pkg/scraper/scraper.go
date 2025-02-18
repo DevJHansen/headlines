@@ -759,3 +759,66 @@ func ScrapeRepublikein(c *colly.Collector, headlineChan chan<- internal.Headline
 
 	c.Visit("https://www.republikein.com.na/")
 }
+
+func ScrapeNbc(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
+	defer wg.Done()
+	c.OnHTML(`div#views_slideshow_cycle_teaser_section_-block_6`, func(e *colly.HTMLElement) {
+		e.ForEach("div.views_slideshow_cycle_slide views_slideshow_slide", func(_ int, el *colly.HTMLElement) {
+
+			func(el *colly.HTMLElement) {
+				linkEl := el.DOM.Find("div.views-field-title a").First()
+				linkToArticle, _ := linkEl.Attr("href")
+
+				if linkToArticle == "" {
+					return
+				}
+
+				linkToArticle = "https://nbcnews.na/" + linkToArticle
+
+				articleCollector := c.Clone()
+
+				articleCollector.OnHTML("article.node--type-article.node--view-mode-full", func(e *colly.HTMLElement) {
+					source := "NBC"
+					currentTime := time.Now()
+					createdAt := currentTime.Unix()
+
+					fbHeadline, _ := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
+
+					if fbHeadline.Link == linkToArticle {
+						return
+					}
+
+					mediaElement := e.DOM.Find("div.image-preview img").First()
+					mediaLink, _ := mediaElement.Attr("src")
+
+					title := e.ChildText("div.node-content h2")
+					var contentJoined string
+					e.DOM.Find("div.field--name-body p").Each(func(_ int, el *goquery.Selection) {
+						contentJoined += el.Text() + " "
+					})
+
+					headlineChan <- internal.Headline{
+						Media:      mediaLink,
+						Title:      title,
+						Content:    contentJoined,
+						CreatedAt:  createdAt,
+						Source:     source,
+						Link:       linkToArticle,
+						Posted:     false,
+						DatePosted: 0,
+						Deleted:    false,
+					}
+				})
+
+				fmt.Println(e.Request.AbsoluteURL(linkToArticle))
+				articleCollector.Visit(e.Request.AbsoluteURL(linkToArticle))
+			}(el)
+		})
+	})
+
+	c.OnScraped(func(_ *colly.Response) {
+		fmt.Println("Finished scraping NBC")
+	})
+
+	c.Visit("https://nbcnews.na/")
+}

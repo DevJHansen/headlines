@@ -46,6 +46,9 @@ func Handler(w http.ResponseWriter, r *http.Request, ctx context.Context, app *f
 	wg.Add(1)
 	go scraper.ScrapeInformante(colly.NewCollector(), headlinesChannel, &wg, app, ctx)
 
+	wg.Add(1)
+	go scraper.ScrapeNbc(colly.NewCollector(), headlinesChannel, &wg, app, ctx)
+
 	// wg.Add(1)
 	// go scraper.ScrapeRepublikein(colly.NewCollector(), headlinesChannel, &wg, app, ctx)
 
