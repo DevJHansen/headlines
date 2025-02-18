@@ -3,6 +3,7 @@ package scraper
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -762,43 +763,65 @@ func ScrapeRepublikein(c *colly.Collector, headlineChan chan<- internal.Headline
 
 func ScrapeNbc(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
 	defer wg.Done()
-	c.OnHTML(`div#views_slideshow_cycle_teaser_section_-block_6`, func(e *colly.HTMLElement) {
-		e.ForEach("div.views_slideshow_cycle_slide views_slideshow_slide", func(_ int, el *colly.HTMLElement) {
 
+	c.OnHTML(`div#views_slideshow_cycle_teaser_section_-block_6`, func(e *colly.HTMLElement) {
+
+		e.ForEach("div.views_slideshow_cycle_slide.views_slideshow_slide", func(_ int, el *colly.HTMLElement) {
+			log.Print("Found article")
 			func(el *colly.HTMLElement) {
 				linkEl := el.DOM.Find("div.views-field-title a").First()
 				linkToArticle, _ := linkEl.Attr("href")
 
 				if linkToArticle == "" {
+					log.Println("Warning: Empty article link found")
 					return
 				}
 
-				linkToArticle = "https://nbcnews.na/" + linkToArticle
+				linkToArticle = "https://nbcnews.na" + linkToArticle
 
 				articleCollector := c.Clone()
 
-				articleCollector.OnHTML("article.node--type-article.node--view-mode-full", func(e *colly.HTMLElement) {
+				articleCollector.OnHTML("body", func(e *colly.HTMLElement) {
+					log.Println("Found article content")
+
 					source := "NBC"
 					currentTime := time.Now()
 					createdAt := currentTime.Unix()
 
-					fbHeadline, _ := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
+					fbHeadline, err := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
+					if err != nil {
+						log.Printf("Error getting headline from Firebase: %v", err)
+					}
 
 					if fbHeadline.Link == linkToArticle {
+						log.Printf("Article already in database: %s", linkToArticle)
 						return
 					}
 
 					mediaElement := e.DOM.Find("div.image-preview img").First()
 					mediaLink, _ := mediaElement.Attr("src")
 
-					title := e.ChildText("div.node-content h2")
+					fullLink := ""
+
+					if mediaLink != "" {
+						fullLink = "https://nbcnews.na" + mediaLink
+					}
+
+					title := e.DOM.Find("nav.breadcrumb ol li").Last().Text()
+
+					title = strings.Trim(title, " ")
+
+					if title == "" {
+						title = e.ChildText("div.node-content h2")
+					}
+
 					var contentJoined string
 					e.DOM.Find("div.field--name-body p").Each(func(_ int, el *goquery.Selection) {
 						contentJoined += el.Text() + " "
 					})
 
-					headlineChan <- internal.Headline{
-						Media:      mediaLink,
+					headline := internal.Headline{
+						Media:      fullLink,
 						Title:      title,
 						Content:    contentJoined,
 						CreatedAt:  createdAt,
@@ -808,17 +831,21 @@ func ScrapeNbc(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sy
 						DatePosted: 0,
 						Deleted:    false,
 					}
+
+					headlineChan <- headline
+					log.Printf("Headline sent to channel: %s", title)
 				})
 
-				fmt.Println(e.Request.AbsoluteURL(linkToArticle))
+				log.Println(e.Request.AbsoluteURL(linkToArticle))
 				articleCollector.Visit(e.Request.AbsoluteURL(linkToArticle))
 			}(el)
 		})
 	})
 
 	c.OnScraped(func(_ *colly.Response) {
-		fmt.Println("Finished scraping NBC")
+		log.Println("Finished scraping NBC") // Log finish
 	})
 
+	log.Println("Visiting NBC main page") // Log main page visit
 	c.Visit("https://nbcnews.na/")
 }
