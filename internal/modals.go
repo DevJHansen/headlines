@@ -10,4 +10,5 @@ type Headline struct {
 	Posted     bool   `json:"posted"`
 	DatePosted int64  `json:"datePosted"`
 	Deleted    bool   `json:"deleted"`
+	Project    string `json:"project"`
 }

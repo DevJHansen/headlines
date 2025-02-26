@@ -57,6 +57,7 @@ func ScrapeTheNamibian(c *colly.Collector, headlineChan chan<- internal.Headline
 			content = strings.TrimSpace(content)
 
 			headlineChan <- internal.Headline{
+				Project:    "headlines.com.na",
 				Media:      mediaLink,
 				Title:      title,
 				Content:    content,
@@ -122,6 +123,7 @@ func ScrapeTheNamibian(c *colly.Collector, headlineChan chan<- internal.Headline
 							content = strings.TrimSpace(content)
 
 							headlineChan <- internal.Headline{
+								Project:    "headlines.com.na",
 								Media:      mediaLink,
 								Title:      title,
 								Content:    content,
@@ -190,6 +192,7 @@ func ScrapeTheBrief(c *colly.Collector, headlineChan chan<- internal.Headline, w
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -256,6 +259,7 @@ func ScrapeFutureMedia(c *colly.Collector, headlineChan chan<- internal.Headline
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -322,6 +326,7 @@ func ScrapeOilAndGas(c *colly.Collector, headlineChan chan<- internal.Headline, 
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -378,6 +383,7 @@ func ScrapeOilAndGas(c *colly.Collector, headlineChan chan<- internal.Headline, 
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -434,6 +440,7 @@ func ScrapeOilAndGas(c *colly.Collector, headlineChan chan<- internal.Headline, 
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -500,6 +507,7 @@ func ScrapeNewEra(c *colly.Collector, headlineChan chan<- internal.Headline, wg 
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -556,6 +564,7 @@ func ScrapeNewEra(c *colly.Collector, headlineChan chan<- internal.Headline, wg 
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -612,6 +621,7 @@ func ScrapeNewEra(c *colly.Collector, headlineChan chan<- internal.Headline, wg 
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
@@ -676,6 +686,7 @@ func ScrapeInformante(c *colly.Collector, headlineChan chan<- internal.Headline,
 					content = strings.TrimSpace(content)
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      parsedMediaLink,
 						Title:      title,
 						Content:    content,
@@ -736,6 +747,7 @@ func ScrapeRepublikein(c *colly.Collector, headlineChan chan<- internal.Headline
 					content := e.ChildText("div.articleBody")
 
 					headlineChan <- internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    content,
