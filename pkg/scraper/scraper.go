@@ -245,10 +245,23 @@ func ScrapeFutureMedia(c *colly.Collector, headlineChan chan<- internal.Headline
 						return
 					}
 
+					var mediaLink string
+
 					// Done after firestore check for efficiency
 					mediaContainer := e.DOM.Find("div.proradio-entrycontent")
-					mediaElement := mediaContainer.Find("img").First()
-					mediaLink, _ := mediaElement.Attr("src")
+					imgElement := mediaContainer.Find("img").First()
+					imgLink, imgExists := imgElement.Attr("src")
+
+					if imgExists {
+						mediaLink = imgLink
+					}
+
+					videoElement := mediaContainer.Find("video").First()
+					videoLink, videoExists := videoElement.Attr("src")
+
+					if videoExists {
+						mediaLink = videoLink
+					}
 
 					title := e.ChildText("h1.proradio-pagecaption.proradio-glitchtxt")
 					content := ""
