@@ -874,3 +874,163 @@ func ScrapeNbc(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sy
 	log.Println("Visiting NBC main page") // Log main page visit
 	c.Visit("https://nbcnews.na/")
 }
+
+func ScrapeBusinessExpress(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
+	defer wg.Done()
+
+	c.OnHTML(`div#frontpage-area_c`, func(e *colly.HTMLElement) {
+
+		e.ForEach("div.hk-gridunit.hcolumn-1-4.hk-gridunit-size1", func(_ int, el *colly.HTMLElement) {
+			log.Print("Found article")
+			func(el *colly.HTMLElement) {
+				linkEl := el.DOM.Find("div.hk-gridunit-bg a").First()
+				linkToArticle, _ := linkEl.Attr("href")
+
+				if linkToArticle == "" {
+					log.Println("Warning: Empty article link found")
+					return
+				}
+
+				articleCollector := c.Clone()
+
+				articleCollector.OnHTML("body", func(e *colly.HTMLElement) {
+					log.Println("Found article content")
+
+					source := "Business Express"
+					currentTime := time.Now()
+					createdAt := currentTime.Unix()
+
+					fbHeadline, err := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
+					if err != nil {
+						log.Printf("Error getting headline from Firebase: %v", err)
+					}
+
+					if fbHeadline.Link == linkToArticle {
+						log.Printf("Article already in database: %s", linkToArticle)
+						return
+					}
+
+					mediaElement := e.DOM.Find("div.parallax-mirror img").First()
+					mediaLink, _ := mediaElement.Attr("src")
+
+					title := e.DOM.Find("h1.loop-title.entry-title").Text()
+
+					title = strings.Trim(title, " ")
+
+					var contentJoined string
+					e.DOM.Find("div.entry-the-content p").Each(func(_ int, el *goquery.Selection) {
+						contentJoined += el.Text() + " "
+					})
+
+					headline := internal.Headline{
+						Media:      mediaLink,
+						Title:      title,
+						Content:    contentJoined,
+						CreatedAt:  createdAt,
+						Source:     source,
+						Link:       linkToArticle,
+						Posted:     false,
+						DatePosted: 0,
+						Deleted:    false,
+					}
+
+					headlineChan <- headline
+					log.Printf("Headline sent to channel: %s", title)
+				})
+
+				log.Println(e.Request.AbsoluteURL(linkToArticle))
+				articleCollector.Visit(e.Request.AbsoluteURL(linkToArticle))
+			}(el)
+		})
+	})
+
+	c.OnScraped(func(_ *colly.Response) {
+		log.Println("Finished scraping Business Express")
+	})
+
+	log.Println("Visiting Business Express main page")
+	c.Visit("https://nambusinessexpress.com/")
+}
+
+// func ScrapeNamibianSun(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
+// 	defer wg.Done()
+
+// 	c.OnHTML(`main`, func(e *colly.HTMLElement) {
+
+// 		e.ForEach("div.col-md-8.col-xs-12", func(i int, el *colly.HTMLElement) {
+// 			if(i != 0) {
+// 				return
+// 			}
+
+// 			log.Print("Found article")
+// 			func(el *colly.HTMLElement) {
+// 				storiesContainer :=  el.DOM.Find("div.tab-content div.new-carousel-one-image.tab-pane.fade.in.active").First()
+
+// 				linkEl := storiesContainer.Find("div.hk-gridunit-bg a").First()
+// 				linkToArticle, _ := linkEl.Attr("href")
+
+// 				if linkToArticle == "" {
+// 					log.Println("Warning: Empty article link found")
+// 					return
+// 				}
+
+// 				articleCollector := c.Clone()
+
+// 				articleCollector.OnHTML("body", func(e *colly.HTMLElement) {
+// 					log.Println("Found article content")
+
+// 					source := "Business Express"
+// 					currentTime := time.Now()
+// 					createdAt := currentTime.Unix()
+
+// 					fbHeadline, err := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
+// 					if err != nil {
+// 						log.Printf("Error getting headline from Firebase: %v", err)
+// 					}
+
+// 					if fbHeadline.Link == linkToArticle {
+// 						log.Printf("Article already in database: %s", linkToArticle)
+// 						return
+// 					}
+
+// 					mediaElement := e.DOM.Find("div.parallax-mirror img").First()
+// 					mediaLink, _ := mediaElement.Attr("src")
+
+// 					title := e.DOM.Find("h1. loop-title entry-title").Text()
+
+// 					title = strings.Trim(title, " ")
+
+// 					var contentJoined string
+// 					e.DOM.Find("div.entry-the-content p").Each(func(_ int, el *goquery.Selection) {
+// 						contentJoined += el.Text() + " "
+// 					})
+
+// 					headline := internal.Headline{
+// 						Media:      mediaLink,
+// 						Title:      title,
+// 						Content:    contentJoined,
+// 						CreatedAt:  createdAt,
+// 						Source:     source,
+// 						Link:       linkToArticle,
+// 						Posted:     false,
+// 						DatePosted: 0,
+// 						Deleted:    false,
+// 					}
+
+// 					headlineChan <- headline
+// 					log.Printf("Headline sent to channel: %s", title)
+// 				})
+
+// 				log.Println(e.Request.AbsoluteURL(linkToArticle))
+// 				articleCollector.Visit(e.Request.AbsoluteURL(linkToArticle))
+// 			}(el)
+// 		})
+// 	})
+
+// 	c.OnScraped(func(_ *colly.Response) {
+// 		log.Println("Finished scraping Namibian Sun")
+// 	})
+
+// 	log.Println("Visiting Namibian Sun main page")
+// 	c.Visit("https://www.namibiansun.com/")
+// }
