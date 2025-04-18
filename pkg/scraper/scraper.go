@@ -910,8 +910,9 @@ func ScrapeBusinessExpress(c *colly.Collector, headlineChan chan<- internal.Head
 						return
 					}
 
-					mediaElement := e.DOM.Find("div.parallax-mirror img").First()
-					mediaLink, _ := mediaElement.Attr("src")
+					// Modified selector to target the div with the data-image-src attribute
+					mediaElement := e.DOM.Find("div.entry-featured-img-headerwrap").First()
+					mediaLink, _ := mediaElement.Attr("data-image-src")
 
 					title := e.DOM.Find("h1.loop-title.entry-title").Text()
 
@@ -952,85 +953,94 @@ func ScrapeBusinessExpress(c *colly.Collector, headlineChan chan<- internal.Head
 	c.Visit("https://nambusinessexpress.com/")
 }
 
-// func ScrapeNamibianSun(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
-// 	defer wg.Done()
+func ScrapeNamibianSun(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
+	defer wg.Done()
 
-// 	c.OnHTML(`main`, func(e *colly.HTMLElement) {
+	c.OnHTML(`div.row[data-row_id="1"]`, func(e *colly.HTMLElement) {
+		e.ForEach("div.col-md-8.col-xs-12", func(i int, el *colly.HTMLElement) {
+			// We are interested in the first instance of this div which contains the top stories
+			if i != 0 {
+				return
+			}
 
-// 		e.ForEach("div.col-md-8.col-xs-12", func(i int, el *colly.HTMLElement) {
-// 			if(i != 0) {
-// 				return
-// 			}
+			log.Print("Found top stories section")
+			storiesContainer := el.DOM.Find("div.focus-tabs div.tab-content div#tab-9201.tab-pane.fade.in.active").First()
 
-// 			log.Print("Found article")
-// 			func(el *colly.HTMLElement) {
-// 				storiesContainer :=  el.DOM.Find("div.tab-content div.new-carousel-one-image.tab-pane.fade.in.active").First()
+			storiesContainer.Find("article.thumb-article").Each(func(_ int, article *goquery.Selection) {
+				linkEl := article.Find("a").First()
+				linkToArticle, _ := linkEl.Attr("href")
 
-// 				linkEl := storiesContainer.Find("div.hk-gridunit-bg a").First()
-// 				linkToArticle, _ := linkEl.Attr("href")
+				if linkToArticle == "" {
+					log.Println("Warning: Empty article link found")
+					return
+				}
 
-// 				if linkToArticle == "" {
-// 					log.Println("Warning: Empty article link found")
-// 					return
-// 				}
+				absoluteURL := e.Request.AbsoluteURL(linkToArticle)
+				articleCollector := c.Clone()
 
-// 				articleCollector := c.Clone()
+				articleCollector.OnHTML("body", func(e *colly.HTMLElement) {
+					log.Println("Found article content for:", absoluteURL)
 
-// 				articleCollector.OnHTML("body", func(e *colly.HTMLElement) {
-// 					log.Println("Found article content")
+					source := "Namibian Sun"
+					currentTime := time.Now()
+					createdAt := currentTime.Unix()
 
-// 					source := "Business Express"
-// 					currentTime := time.Now()
-// 					createdAt := currentTime.Unix()
+					fbHeadline, err := firebaseUtils.GetHeadlineByField(app, ctx, "link", absoluteURL)
+					if err != nil {
+						log.Printf("Error getting headline from Firebase: %v", err)
+					}
 
-// 					fbHeadline, err := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
-// 					if err != nil {
-// 						log.Printf("Error getting headline from Firebase: %v", err)
-// 					}
+					if fbHeadline.Link == absoluteURL {
+						log.Printf("Article already in database: %s", absoluteURL)
+						return
+					}
 
-// 					if fbHeadline.Link == linkToArticle {
-// 						log.Printf("Article already in database: %s", linkToArticle)
-// 						return
-// 					}
+					// Extracting the main image
+					mediaElement := e.DOM.Find("div.article-main-img div.articleTopSlider div.owl-item.active article a.fancybox img").First()
+					mediaLink, _ := mediaElement.Attr("src")
 
-// 					mediaElement := e.DOM.Find("div.parallax-mirror img").First()
-// 					mediaLink, _ := mediaElement.Attr("src")
+					if mediaLink == "" {
+						log.Println("Warning: Could not find main image for:", absoluteURL)
+					}
 
-// 					title := e.DOM.Find("h1. loop-title entry-title").Text()
+					// Extracting the title
+					title := e.DOM.Find("h1.article-title").Text()
+					title = strings.TrimSpace(title)
 
-// 					title = strings.Trim(title, " ")
+					// Extracting the article content
+					var contentJoined string
+					e.DOM.Find("div.article-body div.articleBody").Each(func(_ int, el *goquery.Selection) {
+						el.Find("div.articleAd").Remove() // Remove potential ads within the content
+						contentJoined += el.Text() + " "
+					})
+					contentJoined = strings.TrimSpace(contentJoined)
 
-// 					var contentJoined string
-// 					e.DOM.Find("div.entry-the-content p").Each(func(_ int, el *goquery.Selection) {
-// 						contentJoined += el.Text() + " "
-// 					})
+					headline := internal.Headline{
+						Media:      mediaLink,
+						Title:      title,
+						Content:    contentJoined,
+						CreatedAt:  createdAt,
+						Source:     source,
+						Link:       absoluteURL,
+						Posted:     false,
+						DatePosted: 0,
+						Deleted:    false,
+					}
 
-// 					headline := internal.Headline{
-// 						Media:      mediaLink,
-// 						Title:      title,
-// 						Content:    contentJoined,
-// 						CreatedAt:  createdAt,
-// 						Source:     source,
-// 						Link:       linkToArticle,
-// 						Posted:     false,
-// 						DatePosted: 0,
-// 						Deleted:    false,
-// 					}
+					headlineChan <- headline
+					log.Printf("Headline sent to channel: %s", title)
+				})
 
-// 					headlineChan <- headline
-// 					log.Printf("Headline sent to channel: %s", title)
-// 				})
+				log.Println("Visiting article:", absoluteURL)
+				articleCollector.Visit(absoluteURL)
+			})
+		})
+	})
 
-// 				log.Println(e.Request.AbsoluteURL(linkToArticle))
-// 				articleCollector.Visit(e.Request.AbsoluteURL(linkToArticle))
-// 			}(el)
-// 		})
-// 	})
+	c.OnScraped(func(_ *colly.Response) {
+		log.Println("Finished scraping Namibian Sun")
+	})
 
-// 	c.OnScraped(func(_ *colly.Response) {
-// 		log.Println("Finished scraping Namibian Sun")
-// 	})
-
-// 	log.Println("Visiting Namibian Sun main page")
-// 	c.Visit("https://www.namibiansun.com/")
-// }
+	log.Println("Visiting Namibian Sun main page")
+	c.Visit("https://www.namibiansun.com/")
+}
