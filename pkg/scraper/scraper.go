@@ -996,7 +996,7 @@ func ScrapeNamibianSun(c *colly.Collector, headlineChan chan<- internal.Headline
 					}
 
 					// Extracting the main image
-					mediaElement := e.DOM.Find("div.article-main-img div.articleTopSlider div.owl-item.active article a.fancybox img").First()
+					mediaElement := e.DOM.Find("img").First()
 					mediaLink, _ := mediaElement.Attr("src")
 
 					if mediaLink == "" {
