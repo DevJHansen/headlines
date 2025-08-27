@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:miningandenergy.com.na)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(go fmt:*)",
+      "Bash(go vet:*)",
+      "Bash(go:*)",
+      "Bash(CGO_ENABLED=0 go run main.go)",
+      "Bash(lsof:*)",
+      "Bash(PORT=8081 CGO_ENABLED=0 go run main.go)",
+      "Bash(curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/http"
-	"os"
 
 	"github.com/DevJHansen/headlines/cmd"
 	"github.com/DevJHansen/headlines/pkg/firebase"
@@ -11,7 +10,8 @@ import (
 
 func main() {
 	// Get the PORT from the environment variable
-	port := os.Getenv("PORT")
+	// port := os.Getenv("PORT")
+	port := "8081"
 	if port == "" {
 		port = "8080" // Default to port 8080 if PORT is not set
 	}

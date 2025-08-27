@@ -55,6 +55,9 @@ func Handler(w http.ResponseWriter, r *http.Request, ctx context.Context, app *f
 	wg.Add(1)
 	go scraper.ScrapeNamibianSun(colly.NewCollector(), headlinesChannel, &wg, app, ctx)
 
+	wg.Add(1)
+	go scraper.ScrapeMiningAndEnergy(colly.NewCollector(), headlinesChannel, &wg, app, ctx)
+
 	// wg.Add(1)
 	// go scraper.ScrapeRepublikein(colly.NewCollector(), headlinesChannel, &wg, app, ctx)
 

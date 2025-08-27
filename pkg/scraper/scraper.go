@@ -1016,6 +1016,7 @@ func ScrapeNamibianSun(c *colly.Collector, headlineChan chan<- internal.Headline
 					contentJoined = strings.TrimSpace(contentJoined)
 
 					headline := internal.Headline{
+						Project:    "headlines.com.na",
 						Media:      mediaLink,
 						Title:      title,
 						Content:    contentJoined,
@@ -1043,4 +1044,100 @@ func ScrapeNamibianSun(c *colly.Collector, headlineChan chan<- internal.Headline
 
 	log.Println("Visiting Namibian Sun main page")
 	c.Visit("https://www.namibiansun.com/")
+}
+
+func ScrapeMiningAndEnergy(c *colly.Collector, headlineChan chan<- internal.Headline, wg *sync.WaitGroup, app *firebaseSDK.App, ctx context.Context) {
+	defer wg.Done()
+
+	c.OnHTML("div.jnews_module_4507_8_68af50dfed8df", func(e *colly.HTMLElement) {
+		e.ForEach("a[href]", func(i int, el *colly.HTMLElement) {
+			func(el *colly.HTMLElement) {
+				linkToArticle := el.Attr("href")
+				
+				// Skip category links and other non-article links
+				if strings.Contains(linkToArticle, "/category/") || linkToArticle == "" {
+					return
+				}
+
+				articleCollector := c.Clone()
+
+				articleCollector.OnHTML("body", func(e *colly.HTMLElement) {
+					source := "Mining and Energy"
+					currentTime := time.Now()
+					createdAt := currentTime.Unix()
+
+					fbHeadline, _ := firebaseUtils.GetHeadlineByField(app, ctx, "link", linkToArticle)
+
+					if fbHeadline.Link == linkToArticle {
+						return
+					}
+
+					// Try multiple selectors for the featured image
+					var mediaLink string
+					mediaElement := e.DOM.Find(".jeg_featured img").First()
+					if mediaLink, exists := mediaElement.Attr("src"); !exists || mediaLink == "" {
+						mediaElement = e.DOM.Find(".jeg_post_thumbnail img").First()
+						if mediaLink, exists = mediaElement.Attr("src"); !exists || mediaLink == "" {
+							mediaElement = e.DOM.Find("article img").First()
+							if mediaLink, exists = mediaElement.Attr("src"); !exists || mediaLink == "" {
+								mediaElement = e.DOM.Find(".wp-post-image").First()
+								if mediaLink, exists = mediaElement.Attr("src"); !exists || mediaLink == "" {
+									mediaElement = e.DOM.Find(".entry-content img, .post-content img, .content-inner img").First()
+									mediaLink, _ = mediaElement.Attr("src")
+								}
+							}
+						}
+					}
+
+					// Try multiple selectors for the title
+					var title string
+					titleElement := e.DOM.Find("h1.jeg_post_title").First()
+					if titleElement.Length() > 0 {
+						title = strings.TrimSpace(titleElement.Text())
+					} else {
+						titleElement = e.DOM.Find(".jeg_post_title").First()
+						if titleElement.Length() > 0 {
+							title = strings.TrimSpace(titleElement.Text())
+						} else {
+							titleElement = e.DOM.Find("h1").First()
+							if titleElement.Length() > 0 {
+								title = strings.TrimSpace(titleElement.Text())
+							} else {
+								title = strings.TrimSpace(e.ChildText("title"))
+							}
+						}
+					}
+					
+					content := ""
+					e.DOM.Find(".content-inner p").Each(func(_ int, s *goquery.Selection) {
+						content += s.Text() + " "
+					})
+					content = strings.TrimSpace(content)
+
+					headline := internal.Headline{
+						Project:    "headlines.com.na",
+						Media:      mediaLink,
+						Title:      title,
+						Content:    content,
+						CreatedAt:  createdAt,
+						Source:     source,
+						Link:       linkToArticle,
+						Posted:     false,
+						DatePosted: 0,
+						Deleted:    false,
+					}
+
+					headlineChan <- headline
+				})
+
+				articleCollector.Visit(e.Request.AbsoluteURL(linkToArticle))
+			}(el)
+		})
+	})
+
+	c.OnScraped(func(_ *colly.Response) {
+		fmt.Println("Finished scraping Mining and Energy")
+	})
+
+	c.Visit("https://miningandenergy.com.na/")
 }
