@@ -1053,7 +1053,7 @@ func ScrapeMiningAndEnergy(c *colly.Collector, headlineChan chan<- internal.Head
 		e.ForEach("a[href]", func(i int, el *colly.HTMLElement) {
 			func(el *colly.HTMLElement) {
 				linkToArticle := el.Attr("href")
-				
+
 				// Skip category links and other non-article links
 				if strings.Contains(linkToArticle, "/category/") || linkToArticle == "" {
 					return
@@ -1072,42 +1072,123 @@ func ScrapeMiningAndEnergy(c *colly.Collector, headlineChan chan<- internal.Head
 						return
 					}
 
-					// Try multiple selectors for the featured image
 					var mediaLink string
+
+					fmt.Printf("DEBUG: Looking for images in article: %s\n", linkToArticle)
+
+					// Try 1: jeg_featured img
 					mediaElement := e.DOM.Find(".jeg_featured img").First()
-					if mediaLink, exists := mediaElement.Attr("src"); !exists || mediaLink == "" {
+					if mediaElement.Length() > 0 {
+						if src, exists := mediaElement.Attr("src"); exists && src != "" {
+							mediaLink = src
+							fmt.Printf("DEBUG: Found image via .jeg_featured img: %s\n", mediaLink)
+						} else {
+							fmt.Println("DEBUG: .jeg_featured img exists but no src attribute")
+						}
+					} else {
+						fmt.Println("DEBUG: No .jeg_featured img found")
+					}
+
+					// Try 2: jeg_post_thumbnail img
+					if mediaLink == "" {
 						mediaElement = e.DOM.Find(".jeg_post_thumbnail img").First()
-						if mediaLink, exists = mediaElement.Attr("src"); !exists || mediaLink == "" {
-							mediaElement = e.DOM.Find("article img").First()
-							if mediaLink, exists = mediaElement.Attr("src"); !exists || mediaLink == "" {
-								mediaElement = e.DOM.Find(".wp-post-image").First()
-								if mediaLink, exists = mediaElement.Attr("src"); !exists || mediaLink == "" {
-									mediaElement = e.DOM.Find(".entry-content img, .post-content img, .content-inner img").First()
-									mediaLink, _ = mediaElement.Attr("src")
-								}
+						if mediaElement.Length() > 0 {
+							if src, exists := mediaElement.Attr("src"); exists && src != "" {
+								mediaLink = src
+								fmt.Printf("DEBUG: Found image via .jeg_post_thumbnail img: %s\n", mediaLink)
+							} else {
+								fmt.Println("DEBUG: .jeg_post_thumbnail img exists but no src attribute")
 							}
+						} else {
+							fmt.Println("DEBUG: No .jeg_post_thumbnail img found")
 						}
 					}
+
+					// Try 3: article img
+					if mediaLink == "" {
+						mediaElement = e.DOM.Find("article img").First()
+						if mediaElement.Length() > 0 {
+							if src, exists := mediaElement.Attr("src"); exists && src != "" {
+								mediaLink = src
+								fmt.Printf("DEBUG: Found image via article img: %s\n", mediaLink)
+							} else {
+								fmt.Println("DEBUG: article img exists but no src attribute")
+							}
+						} else {
+							fmt.Println("DEBUG: No article img found")
+						}
+					}
+
+					// Try 4: wp-post-image
+					if mediaLink == "" {
+						mediaElement = e.DOM.Find(".wp-post-image").First()
+						if mediaElement.Length() > 0 {
+							if src, exists := mediaElement.Attr("src"); exists && src != "" {
+								mediaLink = src
+								fmt.Printf("DEBUG: Found image via .wp-post-image: %s\n", mediaLink)
+							} else {
+								fmt.Println("DEBUG: .wp-post-image exists but no src attribute")
+							}
+						} else {
+							fmt.Println("DEBUG: No .wp-post-image found")
+						}
+					}
+
+					// Try 5: any img in content areas
+					if mediaLink == "" {
+						mediaElement = e.DOM.Find(".entry-content img, .post-content img, .content-inner img").First()
+						if mediaElement.Length() > 0 {
+							if src, exists := mediaElement.Attr("src"); exists && src != "" {
+								mediaLink = src
+								fmt.Printf("DEBUG: Found image via content img: %s\n", mediaLink)
+							} else {
+								fmt.Println("DEBUG: content img exists but no src attribute")
+							}
+						} else {
+							fmt.Println("DEBUG: No content img found")
+						}
+					}
+
+					// Try 6: any img tag at all
+					if mediaLink == "" {
+						mediaElement = e.DOM.Find("img").First()
+						if mediaElement.Length() > 0 {
+							if src, exists := mediaElement.Attr("src"); exists && src != "" {
+								mediaLink = src
+								fmt.Printf("DEBUG: Found image via any img: %s\n", mediaLink)
+							} else {
+								fmt.Println("DEBUG: img exists but no src attribute")
+							}
+						} else {
+							fmt.Println("DEBUG: No img found at all")
+						}
+					}
+
+					fmt.Printf("DEBUG: Final mediaLink: '%s'\n", mediaLink)
 
 					// Try multiple selectors for the title
 					var title string
 					titleElement := e.DOM.Find("h1.jeg_post_title").First()
 					if titleElement.Length() > 0 {
 						title = strings.TrimSpace(titleElement.Text())
+						fmt.Printf("DEBUG: Found title via h1.jeg_post_title: %s\n", title)
 					} else {
 						titleElement = e.DOM.Find(".jeg_post_title").First()
 						if titleElement.Length() > 0 {
 							title = strings.TrimSpace(titleElement.Text())
+							fmt.Printf("DEBUG: Found title via .jeg_post_title: %s\n", title)
 						} else {
 							titleElement = e.DOM.Find("h1").First()
 							if titleElement.Length() > 0 {
 								title = strings.TrimSpace(titleElement.Text())
+								fmt.Printf("DEBUG: Found title via h1: %s\n", title)
 							} else {
 								title = strings.TrimSpace(e.ChildText("title"))
+								fmt.Printf("DEBUG: Found title via title tag: %s\n", title)
 							}
 						}
 					}
-					
+
 					content := ""
 					e.DOM.Find(".content-inner p").Each(func(_ int, s *goquery.Selection) {
 						content += s.Text() + " "

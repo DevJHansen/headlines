@@ -9,12 +9,8 @@ import (
 )
 
 func main() {
-	// Get the PORT from the environment variable
-	// port := os.Getenv("PORT")
-	port := "8081"
-	if port == "" {
-		port = "8080" // Default to port 8080 if PORT is not set
-	}
+
+	port := "8080"
 
 	ctx := context.Background()
 	app, _ := firebase.NewFirebaseApp(ctx)
